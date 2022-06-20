@@ -1,0 +1,190 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: caihcloud-scheduler-clusterrole
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+      - events
+    verbs:
+      - create
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - delete
+      - get
+      - list
+      - watch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - bindings
+      - pods/binding
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - pods/status
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - replicationcontrollers
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+      - extensions
+    resources:
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+      - persistentvolumes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "storage.k8s.io"
+    resources:
+      - storageclasses
+      - csinodes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "coordination.k8s.io"
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - list
+      - update
+  - apiGroups:
+      - "events.k8s.io"
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: caihcloud-scheduler-sa
+  namespace: kube-system
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: caihcloud-scheduler-clusterrolebinding
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: caihcloud-scheduler-clusterrole
+subjects:
+  - kind: ServiceAccount
+    name: caihcloud-scheduler-sa
+    namespace: kube-system
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caihcloud-scheduler
+  namespace: kube-system
+  labels:
+    component: caihcloud-scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: caihcloud-scheduler
+  template:
+    metadata:
+      labels:
+        component: caihcloud-scheduler
+    spec:
+      serviceAccount: caihcloud-scheduler-sa
+      priorityClassName: system-cluster-critical
+      volumes:
+        - name: etc-localtime
+          hostPath:
+            path: /etc/localtime
+        - name: scheduler-config
+          configMap:
+            name: scheduler-config
+      containers:
+        - name: scheduler-ctrl
+          image: caihcloud-scheduler:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - caihcloud-scheduler
+            - --config=/etc/kubernetes/scheduler-config.yaml
+            - --v=3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 50Mi
+          volumeMounts:
+            - name: etc-localtime
+              mountPath: /etc/localtime
+            - name: scheduler-config
+              mountPath: /etc/kubernetes

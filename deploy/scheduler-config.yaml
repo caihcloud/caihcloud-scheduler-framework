@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scheduler-config
+  namespace: kube-system
+data:
+  scheduler-config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1alpha1
+    kind: KubeSchedulerConfiguration
+    schedulerName: caihcloud-scheduler
+    leaderElection:
+      leaderElect: true
+      lockObjectName: caihcloud-scheduler
+      lockObjectNamespace: kube-system
+    plugins:
+      preFilter:
+        enabled:
+        - name: "caihcloud-real-node-load-plugin"
+      filter:
+        enabled:
+        - name: "caihcloud-real-node-load-plugin"
+      score:
+        enabled:
+        - name: "caihcloud-real-node-load-plugin"
+          weight: 3
+      preBind:
+        enabled:
+        - name: "caihcloud-real-node-load-plugin"
